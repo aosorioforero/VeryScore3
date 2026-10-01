@@ -21,6 +21,7 @@ h.mainFig = figure('unit','normalized',...
 h.fileMenu = uimenu(h.mainFig, 'Text', 'File');
 h.fileMenu_import = uimenu(h.fileMenu, 'Text', 'Import');
 h.fileMenu_importrandom = uimenu(h.fileMenu, 'Text', 'Import randomly', 'Enable', 'on');
+h.fileMenu_convertOE = uimenu(h.fileMenu, 'Text', 'Convert Open Ephys recording...', 'Separator', 'on');
 h.fileMenu_save = uimenu(h.fileMenu, 'Text', 'Save', 'Enable', 'off');
 h.fileMenu_editInfo = uimenu(h.fileMenu, 'Text', 'Edit file Infos', 'Enable', 'off');
 h.fileMenu_reduce = uimenu(h.fileMenu, 'Text', 'Reduce file size', 'Enable', 'off');

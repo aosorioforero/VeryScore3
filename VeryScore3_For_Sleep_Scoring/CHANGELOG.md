@@ -6,7 +6,12 @@ VeryScore2 1.6, 1.7 and 1.8 (below) brought together in one program, with every 
 (Alejandro Osorio-Forero, with Claude). Files are the same as in VeryScore2, in both directions.
 
 - `VS3_main` starts the program; `VS3_display`, `VS3_tracesPlot`, `VS3_autoScoreTool`, `VS3_thermalTool`,
-  `VS3_photometry`, `VS3_autoScoreClassic` (the VeryScore2 autoscoring) and `VS3_pref`.
+  `VS3_photometry`, `VS3_convertOpenEphys`, `VS3_autoScoreClassic` (the VeryScore2 autoscoring) and `VS3_pref`.
+- File > Convert Open Ephys recording (`VS3_convertOpenEphys`): the converter used until now (`ToVS2_2026`)
+  in VeryScore3, with the same output (checked on 14 recordings), folders asked and remembered, its own `.npy`
+  reader (no npy-matlab), and the converted file opened on request.
+- Photometry display: the dF/F is scaled from its typical spread within one minute (five times taller than in
+  VeryScore2 1.7 on an 8-h recording) and centred in its trace slot on every screen.
 - Preferences are stored in the group `VeryScore3`; the ones set in VeryScore2 1.6-1.8 (python.exe, folders,
   photometry and auto-scoring choices) are taken over automatically.
 - Auto-scoring library: the shipped recordings (`autoscore/VS3_autoLibrary.mat`) are never modified; your own

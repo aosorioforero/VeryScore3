@@ -7,6 +7,7 @@ VeryScore3 is the continuation of **VeryScore2**, written by Romain Cardis and A
 - **Auto-scoring** that learns from scored recordings and adapts to each new one (about 90 % agreement with a human scorer, as good as a second human)
 - **Thermal video**: the temperature of the animal from an Optris thermal camera, in a panel above the hypnogram
 - **Photometry**: dF/F of a fibre photometry channel recorded with the EEG
+- **Open Ephys**: recordings converted into VeryScore files from the File menu
 - Everything in one program, `VS3_main`. See CHANGELOG.md for the full list.
 
 _Dedicated to Romain Cardis and Anita Lüthi, who wrote VeryScore2 and shared it with all of us._
@@ -24,7 +25,7 @@ If VeryScore2 is also on your MATLAB path, remove it: both have files with the s
 
 ## Files
 
-Simply launch VS3_main and import a file obtained with Simply2Read (or any .mat file in the same format) in the "File" menu.
+Simply launch VS3_main and import a file obtained with Simply2Read (or any .mat file in the same format) in the "File" menu. Open Ephys recordings are converted first with **File > Convert Open Ephys recording...** (see **Open Ephys recordings** below).
 The files should be named like this:
 
 AnimalName_recordingNumber_condition_t.mat
@@ -110,6 +111,8 @@ Next epoch of a state: **shift+w**, **shift+n**, **shift+r**, **shift+m**, **shi
 **File >**
 
 **Import:** Let you import a new file.
+
+**Convert Open Ephys recording...:** converts Open Ephys recordings into VeryScore files, see **Open Ephys recordings** below.
 
 **Import randomly:** Let you select multiple files and give them for you to score in a random order without knowing which one. This is very useful in case you need to score your files in a blind manner. We are all subjected to treatment biases so doing this removes this concern.
 
@@ -231,11 +234,22 @@ Fibre photometry recorded on an analog input (for example `ADC1` of an Open Ephy
 
 Then you can check the carrier frequencies (217.38 Hz for the 465 nm LED and 322.57 Hz for the purple one; the exact values are measured in the data within 2 Hz) and the time left out at the start. The choices are remembered for the next file. The dF/F of the time left out at the start is an extrapolation of the baseline; you are warned when the bleaching fit is poorly constrained (a time constant at its limit). The exponential decay needs at least 20 min after the time left out.
 
-The selected trace is replaced by the dF/F, scaled to about the height of one trace slot, and its name gets the suffix `dF/F`. A file holds the dF/F of one photometry channel: computing another channel replaces it (you are asked first). The values in % are stored in the file as the variable **Photometry** (`Photometry.time` in seconds since the first sample, `Photometry.dff` in % at 20 Hz, `Photometry.signal` and `Photometry.iso` the two carrier amplitudes in V, `Photometry.baseline`, `Photometry.dffIso` the purple control, `Photometry.method`, `Photometry.fit`, ...). The next time the file is loaded, the dF/F is shown in place of the raw channel. **Traces > Reverse gain and filter** shows the raw trace again.
+The selected trace is replaced by the dF/F and its name gets the suffix `dF/F`. On screen it is scaled so that its typical variation within one minute fills about one trace slot, and it is centred in its slot on every screen (its slow drift over the night is left out of the display only; the values in the file are not changed). Select it and use the up/down arrows to change its gain. A file holds the dF/F of one photometry channel: computing another channel replaces it (you are asked first). The values in % are stored in the file as the variable **Photometry** (`Photometry.time` in seconds since the first sample, `Photometry.dff` in % at 20 Hz, `Photometry.signal` and `Photometry.iso` the two carrier amplitudes in V, `Photometry.baseline`, `Photometry.dffIso` the purple control, `Photometry.method`, `Photometry.fit`, ...). The next time the file is loaded, the dF/F is shown in place of the raw channel. **Traces > Reverse gain and filter** shows the raw trace again.
 
 **Show dF/F overview figure:** the carrier amplitudes with the fitted baseline, the dF/F and the purple control over the whole recording. Look at it once per recording to check the fit.
 
 How it is computed: the channel is multiplied by the cosine and sine of each carrier, low-pass filtered (2-s Kaiser filter, 8 Hz) and decimated to 20 Hz; the amplitude of each LED is `2*hypot(I, Q)`; dF/F = 100 × (signal − F0) / F0. The tool refuses a channel without carrier, and a detector output stuck at the ADC ceiling (4.59 V). Files whose ADC channels were stored a million times too small by an early Open Ephys converter (September 2026) are recognised and corrected before computing. The code is in `VS3_photometry.m`; `VS3_photometry('compute', x, fs, 'method', 'purple')` runs the computation on a signal in volts (add `'volts', false` for other units).
+
+
+## Open Ephys recordings
+
+**File > Convert Open Ephys recording...** converts recordings of the Open Ephys GUI (binary format, versions 0.6 and 1.x) into VeryScore files. Select the folder of the session (every recording found below it is converted, whatever the folder layout, several Record Nodes included) and the folder for the converted files. Each recording becomes `<name>_<yymmdd>.mat` with:
+
+- `traces`: every channel raw, in volts (headstage channels and ADC inputs, for example a photometry detector), nothing filtered or rescaled; `traceName`: the channel names
+- `Infos`: sampling rate, channel names and units, the exact time of the first sample (`Infos.StartTime`, clock of the recording PC, used to align a thermal video), dropped samples, Open Ephys version, machine, ...
+- `Events` and `Messages` when TTL events or messages were recorded
+
+When one recording was converted, you can open it right away. An 8-h recording with 5 channels takes about 20 s. From the command line: `VS3_convertOpenEphys(sessionFolder, targetFolder)` (options `'unit'` `'V'` / `'uV'`, `'overwrite'`). The `.npy` files of the recording are read by VeryScore3 itself (no npy-matlab needed).
 
 
 ## Credits

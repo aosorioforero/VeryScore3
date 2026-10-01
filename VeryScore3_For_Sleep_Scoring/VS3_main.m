@@ -11,6 +11,7 @@ function VS3_main
 % - Save: names not ending in _t.mat no longer lose characters.
 % - Import randomly no longer needs the Statistics toolbox.
 % - Auto-scoring library: the shipped recordings plus your own, kept apart.
+% - File > Convert Open Ephys recording (VS3_convertOpenEphys).
 %
 % History of VeryScore2:
 % Version 1.5 addings.
@@ -78,6 +79,7 @@ h.fileMenu_import.Callback = @importOne;
 h.fileMenu_save.Callback = @saveScoring;
 h.fileMenu_editInfo.Callback = @editInfos;
 h.fileMenu_importrandom.Callback = @importRand;
+h.fileMenu_convertOE.Callback = @convertOpenEphys;
 h.fileMenu_reduce.Callback = @reduceFile;
 h.fileMenu_rename.Callback = @renameFileToBt;
 % Traces
@@ -310,12 +312,41 @@ h.mainFig.KeyPressFcn = @key;
         h.rand = 0;
         import  
     end
+
+    function convertOpenEphys(~,~)
+        % Open Ephys binary recordings -> VeryScore files, see VS3_convertOpenEphys
+        try
+            files = VS3_convertOpenEphys();
+        catch err
+            errordlg(sprintf('The conversion failed:\n%s', err.message), 'Open Ephys conversion');
+            return
+        end
+        if numel(files) ~= 1 || (isfield(h, 'rand') && h.rand == 1); return; end
+        [~, n, e] = fileparts(files{1});
+        an = questdlg(sprintf('Open %s%s now?', n, e), 'Open Ephys conversion', 'Open', 'Not now', 'Open');
+        if ~strcmp(an, 'Open'); return; end
+        if isfield(h, 'bigplot') && h.issaved == 0
+            an = questdlg('The scoring of the file that is open is not saved. Open the converted file anyway?', ...
+                'CAREFUL!', 'Open anyway', 'Cancel', 'Cancel');
+            if ~strcmp(an, 'Open anyway'); return; end
+        end
+        h.rand = 0;
+        h.pendingFile = files{1};
+        import
+    end
     
     function import(~,~)
         % function to import a file into the software and create the plots
         if h.rand == 0
-            [filen, pathf] = uigetfile('*.mat','Select your file to score');
-            if filen == 0; return; end
+            if isfield(h, 'pendingFile') && ~isempty(h.pendingFile) % a file just converted (convertOpenEphys)
+                [pathf, n, e] = fileparts(h.pendingFile);
+                filen = [n, e];
+                pathf = [pathf, filesep];
+                h.pendingFile = '';
+            else
+                [filen, pathf] = uigetfile('*.mat','Select your file to score');
+                if filen == 0; return; end
+            end
             h.filen = filen;
             h.path = pathf;
         end

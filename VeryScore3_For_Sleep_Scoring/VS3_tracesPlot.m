@@ -496,8 +496,15 @@ classdef VS3_tracesPlot < handle
             end
             
             for i = 1:size(self.traces,1)
+                y = self.traces(i, pointsBorder);
+                if self.isDFF(i)
+                    % photometry dF/F: centred in its slot on every screen (it drifts slowly over the
+                    % night) and kept within 1.5 slots of it; display only
+                    y = y - median(y, 'omitnan');
+                    y = min(max(y, -1.5*self.space), 1.5*self.space);
+                end
                 set(self.graphLines{i}, 'XData', self.time(pointsBorder),...
-                    'YData', self.traces(i, pointsBorder) - self.space*i)
+                    'YData', y - self.space*i)
                 self.graphLines{i}.UserData(1) = i;
             end
             self.plotax.XLim = [self.second(1,positionBorder(1)), self.second(2,positionBorder(2))];
@@ -708,16 +715,24 @@ classdef VS3_tracesPlot < handle
             end
             v(1:ok(1)-1) = v(ok(1)); % the dF/F starts 3 s after and stops 3 s before the ends of the recording
             v(ok(end)+1:end) = v(ok(end));
-            % scale from the part used by the baseline fit (the start left out can be an extrapolation)
+            % scale: the typical spread of the dF/F within one minute fills most of a trace slot (the
+            % slow drift over the night is removed on screen, see updatePlot); computed on the part
+            % used by the baseline fit (the start left out can be an extrapolation)
             fitted = ~isnan(d);
             if isfield(P, 'params') && isfield(P.params, 'skipStart') && any(fitted & tP > P.params.skipStart)
                 fitted = fitted & tP > P.params.skipStart;
             end
+            x = d(fitted);
+            seg = max(2, round(60/median(diff(tP))));
+            nb = floor(numel(x)/seg);
+            if nb >= 3
+                X = reshape(x(1:nb*seg), seg, nb);
+                ran = median(diff(prctile(X, [2.5 97.5], 1), 1, 1), 'omitnan')/0.8;
+            else
+                ran = diff(prctile(x, [0.5 99.5]));
+            end
             sc = 1;
-            pr = prctile(d(fitted), [0.5 99.5]);
-            ran = diff(pr);
             if ran > 0
-                v = min(max(v, pr(1) - ran), pr(2) + ran); % display only: at most about 3 trace slots
                 sc = self.space/ran; % then rounded to 1, 2 or 5 times a power of ten
                 e = floor(log10(sc));
                 m = sc/10^e;
@@ -729,6 +744,11 @@ classdef VS3_tracesPlot < handle
             self.ChannelNames{row} = [regexprep(self.ChannelNames{row}, ' dF/F$', ''), ' dF/F'];
             self.updatePlot()
             self.initiateNames()
+        end
+
+        function tf = isDFF(self, row)
+            % isDFF  Is display row 'row' a photometry dF/F (see showDFF)?
+            tf = numel(self.ChannelNames) >= row && ischar(self.ChannelNames{row}) && endsWith(self.ChannelNames{row}, ' dF/F');
         end
 
         function deleteAxes(self)
