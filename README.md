@@ -23,6 +23,10 @@ Used for recording up to 8 animals at a time for long periods.
 
 Used to open, visualize and score the data in three main vigilent state (NREMS, REMS, Wakefulness) obtained with Symply2Read.
 
+**VeryScore3_For_Sleep_Scoring**
+
+The continuation of VeryScore2 (2026, Alejandro Osorio-Forero): same files, plus an auto-scoring that learns from scored recordings, the temperature of the animal from a thermal video, and fibre photometry dF/F. See its README.
+
 **Ypnos_For_Closed_Loop_Experiments**
 
 Used for recording data and automatic detection of the three vigilent states (NREMS, REMS, Wakefulness) using the EMG and EEG signals. This version is related to the experiments conducted in the https://doi.org/10.1038/s41593-024-01822-0 paper.
