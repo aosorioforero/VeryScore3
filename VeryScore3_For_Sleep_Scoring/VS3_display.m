@@ -36,6 +36,7 @@ h.toolsMenu_autoScoreLib = uimenu(h.toolsMenu_autoScore, 'Text', 'Library conten
 h.toolsMenu_autoScoreClassic = uimenu(h.toolsMenu_autoScore, 'Text', 'Classic auto-scoring (VeryScore2, selected traces)...', 'Separator', 'on');
 h.toolsMenu_nameTraces = uimenu(h.toolsMenu, 'Text', 'Reload Names from Infos');
 h.toolsMenu_takeSnap = uimenu(h.toolsMenu, 'Text', 'Take a snapshot');
+h.toolsMenu_summary = uimenu(h.toolsMenu, 'Text', 'Summary figure...');
 
 %% Thermal video submenu (temperature panel, see VS3_thermalTool)
 h.toolsMenu_thermal = uimenu(h.toolsMenu, 'Text', 'Thermal video', 'Separator', 'on');

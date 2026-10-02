@@ -12,6 +12,7 @@ function VS3_main
 % - Import randomly no longer needs the Statistics toolbox.
 % - Auto-scoring library: the shipped recordings plus your own, kept apart.
 % - File > Convert Open Ephys recording (VS3_convertOpenEphys).
+% - Tools > Summary figure: hypnogram, EEG sigma, temperature, photometry (VS3_summary).
 %
 % History of VeryScore2:
 % Version 1.5 addings.
@@ -100,6 +101,7 @@ h.toolsMenu_autoScoreLib.Callback = @autoScoreLibrary;
 h.toolsMenu_autoScoreClassic.Callback = @launchAuto;
 h.toolsMenu_nameTraces.Callback = @reloadNames;
 h.toolsMenu_takeSnap.Callback = @takeSnap;
+h.toolsMenu_summary.Callback = @summaryFigure;
 % Tools > Thermal video
 h.toolsMenu_thermalAnalyse.Callback = @thermalAnalyse;
 h.toolsMenu_thermalShow.Callback = @thermalShowHide;
@@ -155,6 +157,38 @@ h.mainFig.KeyPressFcn = @key;
         end
         title(h.filen)
         f.TickDir = 'out';
+    end
+
+    function summaryFigure(~,~)
+        % hypnogram, EEG sigma activity, temperature and photometry of the whole recording (VS3_summary)
+        b = h.bigplot.giveMeB();
+        names = autoScoreNames();
+        d = autoScoreDefaults(names); % the EEG chosen for the auto-scoring, if any
+        [sel, ok] = listdlg('ListString', names, 'SelectionMode', 'single', 'InitialValue', d.eeg(1), ...
+            'Name', 'Summary figure', 'PromptString', 'EEG channel for the sigma activity (10-15 Hz):', 'ListSize', [320 160]);
+        if ~ok || isempty(sel); return; end
+        st = '';
+        ttl = h.filen;
+        if h.rand == 1
+            ttl = 'blind scoring'; % no file name, no date
+        elseif ismember('Infos', who(h.file))
+            Infos = h.file.Infos;
+            if isfield(Infos, 'StartTime'); st = Infos.StartTime; end
+        end
+        try
+            VS3_summary('b', b, 'eeg', h.bigplot.oriTraces(sel, :), 'fs', 200, 'eegName', regexprep(names{sel}, '^\d+: ', ''), ...
+                'thermal', h.thermal, 'photometry', h.photometry, 'startTime', st, 'title', ttl, 'navigate', @goToEpoch);
+        catch err
+            errordlg(sprintf('The summary could not be made:\n%s', err.message), 'Summary figure');
+        end
+    end
+
+    function goToEpoch(ep)
+        % show epoch ep in the main window (a click in the summary figure)
+        if ~isgraphics(h.mainFig) || ~isfield(h, 'bigplot'); return; end
+        h.bigplot.position = min(max(round(ep), 1), numel(h.bigplot.bstate));
+        h.bigplot.updatePlot()
+        figure(h.mainFig)
     end
 
     function swapT(~,~)

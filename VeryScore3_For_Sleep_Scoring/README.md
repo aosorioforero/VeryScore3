@@ -1,3 +1,5 @@
+<p align="center"><img src="images/VS3_banner.png" alt="VeryScore3" width="100%"></p>
+
 # VeryScore3
 
 This software allows you to score mouse sleep (wakefulness, NREMS, REMS) in 4 second epochs.
@@ -8,6 +10,7 @@ VeryScore3 is the continuation of **VeryScore2**, written by Romain Cardis and A
 - **Thermal video**: the temperature of the animal from an Optris thermal camera, in a panel above the hypnogram
 - **Photometry**: dF/F of a fibre photometry channel recorded with the EEG
 - **Open Ephys**: recordings converted into VeryScore files from the File menu
+- **Summary figure**: hypnogram, EEG sigma activity, temperature and photometry of the whole recording
 - Everything in one program, `VS3_main`. See CHANGELOG.md for the full list.
 
 _Dedicated to Romain Cardis and Anita Lüthi, who wrote VeryScore2 and shared it with all of us._
@@ -132,6 +135,8 @@ Next epoch of a state: **shift+w**, **shift+n**, **shift+r**, **shift+m**, **shi
 
 **Take a snapshot:** It takes a snapshot of the current window, essentially reploting the current view in a new figure. You can then save the figure to keep track of your nicest spindles or show irregularities to your collegues.
 
+**Summary figure...:** the whole recording in one figure: the hypnogram, the sigma activity of an EEG channel, the temperature and the photometry dF/F when the file has them, and the time spent in each state. See **Summary figure** below.
+
 **Thermal video:** see **Thermal video** below.
 
 **Photometry:** see **Photometry** below.
@@ -239,6 +244,18 @@ The selected trace is replaced by the dF/F and its name gets the suffix `dF/F`. 
 **Show dF/F overview figure:** the carrier amplitudes with the fitted baseline, the dF/F and the purple control over the whole recording. Look at it once per recording to check the fit.
 
 How it is computed: the channel is multiplied by the cosine and sine of each carrier, low-pass filtered (2-s Kaiser filter, 8 Hz) and decimated to 20 Hz; the amplitude of each LED is `2*hypot(I, Q)`; dF/F = 100 × (signal − F0) / F0. The tool refuses a channel without carrier, and a detector output stuck at the ADC ceiling (4.59 V). Files whose ADC channels were stored a million times too small by an early Open Ephys converter (September 2026) are recognised and corrected before computing. The code is in `VS3_photometry.m`; `VS3_photometry('compute', x, fs, 'method', 'purple')` runs the computation on a signal in volts (add `'volts', false` for other units).
+
+
+## Summary figure
+
+**Tools > Summary figure...** asks for the EEG channel of the sigma activity (the one chosen for the auto-scoring is proposed) and draws, on one time axis (hours since the first sample; panels zoom together):
+
+1. the hypnogram (wake, NREM, REM; artifact epochs with their state, microarousals as marks above wake)
+2. the sigma activity: power of the EEG in the sigma band (10-15 Hz) in every 4-s epoch, in % of its mean over the NREM epochs (of the median when nothing is scored as NREM); NREM in green, as a 3-epoch moving median that keeps the slow (about 1-min) fluctuations of sigma, over the values of each epoch in light green; artifact epochs left out
+3. the temperature of the thermal video, when the file has it (one value per epoch, per video frame in grey)
+4. the photometry dF/F, when the file has it (20 Hz in grey, 10-s mean in blue; the start left out of the baseline fit shaded)
+
+and, on the right, the time in each state (% of the scored time, minutes, number of bouts, mean bout duration), microarousals, artifact and unscored epochs. Clicking in the figure shows that moment in the main window. Save it with the figure's File menu (png, pdf, svg...). In blind mode (Import randomly) it shows neither the file name nor the date. From a script: `[fig, S] = VS3_summary('b', b, 'eeg', x, 'fs', 200, ...)`, where `S` holds the plotted series and the statistics.
 
 
 ## Open Ephys recordings
