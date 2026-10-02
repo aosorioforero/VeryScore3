@@ -218,15 +218,18 @@ bd = get(ax, {'ButtonDownFcn'});
 cf = get(ax, {'CreateFcn'});
 set(ax, 'ButtonDownFcn', '');   % the link to the VeryScore3 window cannot be saved
 set(ax, 'CreateFcn', 'linkaxes(findobj(ancestor(gcbo, ''figure''), ''Type'', ''axes'', ''Tag'', ''VS3summary''), ''x'')');
+fcf = fig.CreateFcn;
+fig.CreateFcn = 'set(gcbo, ''Visible'', ''on'')';  % a summary made without window (scripts) still opens visible
 try
     savefig(fig, fullfile(p, [n, '.fig']));
     exportgraphics(fig, fullfile(p, [n, '.png']), 'Resolution', 150);
 catch err
-    set(ax, {'ButtonDownFcn'}, bd); set(ax, {'CreateFcn'}, cf);
+    set(ax, {'ButtonDownFcn'}, bd); set(ax, {'CreateFcn'}, cf); fig.CreateFcn = fcf;
     rethrow(err)
 end
 set(ax, {'ButtonDownFcn'}, bd);
 set(ax, {'CreateFcn'}, cf);
+fig.CreateFcn = fcf;
 fprintf('Summary saved: %s (.fig and .png)\n', fullfile(p, n));
 end
 
