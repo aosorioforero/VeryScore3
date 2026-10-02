@@ -12,7 +12,8 @@ function [fig, S] = VS3_summary(varargin)
 %   3. temperature of the thermal video, when given (one value per epoch, per frame in grey)
 %   4. photometry dF/F, when given (20 Hz in grey, 10-s mean in colour; the start left out of the
 %      baseline fit shaded)
-% and the time spent in each state, the number of bouts and their mean duration.
+% and, on the right: when the recording ran, a ring of the time spent in each state, the duration of the
+% bouts of each state (box plots over every bout) and the states hour by hour.
 %
 % Options (name/value):
 %   'b'           scoring, one letter per 4-s epoch (w n r, 1 2 3 artifacts, m microarousal, f, b unscored)
@@ -31,7 +32,7 @@ function [fig, S] = VS3_summary(varargin)
 %   VS3_summary('save', fig, file)   saves a summary figure as file.fig and file.png. The .fig opens in
 %   MATLAB with its panels still zoomed together (openfig / double-click); clicking no longer navigates.
 % S holds what is drawn: time (h) and state of every epoch, sigma (% and raw power), the temperature
-% and photometry series, and S.stats (minutes, %, bouts and mean bout duration per state).
+% and photometry series, S.stats (minutes, %, bouts, bout durations per state) and S.perHour.
 %
 % Alejandro Osorio-Forero with Claude, 2026, for VeryScore3.
 
@@ -80,15 +81,16 @@ np = numel(panels);
 ttl = 'Summary';
 if ~isempty(o.title); ttl = ['Summary - ', o.title]; end
 fig = figure('Name', ttl, 'NumberTitle', 'off', 'Color', 'w', 'Visible', o.visible, ...
-    'Units', 'pixels', 'Position', [80 60 1400 180 + 170 * np]);
-left = 0.07; width = 0.66; top = 0.94; gap = 0.035;
+    'Units', 'pixels', 'Position', [60 50 1720 max(820, 180 + 170 * np)]);
+left = 0.055; width = 0.60; top = 0.94; gap = 0.035;
 h1 = 0.12;                                            % hypnogram height (normalized)
-hRest = (top - 0.08 - h1 - gap * (np - 1)) / max(np - 1, 1);
+hRest = min(0.30, (top - 0.08 - h1 - gap * (np - 1)) / max(np - 1, 1));
+if np <= 2; h1 = 0.22; end                            % few panels: not stretched over the whole height
+used = h1 + (np - 1) * (hRest + gap);
 ax = gobjects(1, np);
-y = top;
+y = top - max(0, (top - 0.08 - used) / 2);            % the panels centred in the height
 for i = 1:np
     hi = hRest; if i == 1; hi = h1; end
-    if np == 1; hi = h1 * 2; end
     y = y - hi;
     ax(i) = axes('Parent', fig, 'Position', [left, y, width, hi], 'TickDir', 'out', 'Box', 'off', 'FontSize', 9, ...
         'Tag', 'VS3summary');
@@ -189,10 +191,8 @@ if ~isempty(o.navigate)
     end
 end
 
-% ---- statistics, logo, saving ----
-annotation(fig, 'textbox', [0.75, 0.08, 0.24, 0.78], 'String', statsText(S.stats, nEp, epLen), ...
-    'EdgeColor', 'none', 'FontName', 'Consolas', 'FontSize', 9, 'VerticalAlignment', 'top', 'Interpreter', 'none');
-VS3_logo('show', fig, 'icon', [0.755, 0.865, 0.07, 0.11]);
+% ---- right column: when, how much, how long, hour by hour; logo; saving ----
+S.perHour = rightColumn(fig, S.stats, state, b, nEp, epLen, o.startTime, {colW, colN, colR});
 setappdata(fig, 'VS3summaryFile', o.file);
 mm = uimenu(fig, 'Text', 'Summary');
 uimenu(mm, 'Text', 'Save as .fig and .png...', 'MenuSelectedFcn', 'VS3_summary(''save'', gcbf)');
@@ -259,6 +259,7 @@ for k = 1:3
     d = diff([0, is, 0]);
     starts = find(d == 1); ends = find(d == -1);
     st(k).bouts = numel(starts);
+    st(k).boutDurations = (ends - starts)' * epLen;     % s, one per bout
     if ~isempty(starts); st(k).meanBout = mean(ends - starts) * epLen; end
 end
 st(1).microarousals = sum(b == 'm');
@@ -266,17 +267,131 @@ st(1).artifactEpochs = sum(ismember(b, '123'));
 st(1).unscoredEpochs = sum(~scored);
 end
 
-function s = statsText(st, nEp, epLen)
-scoredPct = 100 * (1 - st(1).unscoredEpochs / nEp);
-lines = {sprintf('Recording  %.2f h (%d epochs)', nEp * epLen / 3600, nEp), ...
-    sprintf('Scored     %.1f %%', scoredPct), '', ...
-    sprintf('%-5s %6s %7s %6s %8s', 'State', '%', 'min', 'bouts', 'mean (s)')};
-for k = 1:3
-    lines{end + 1} = sprintf('%-5s %6.1f %7.1f %6d %8.1f', st(k).state, st(k).percent, st(k).minutes, st(k).bouts, st(k).meanBout); %#ok<AGROW>
+function perHour = rightColumn(fig, st, state, b, nEp, epLen, startTime, cols)
+% the right column of the summary: header (when), ring (how much), box plots (how long), bars (hour by hour)
+colW = cols{1}; colN = cols{2}; colR = cols{3};
+x0 = 0.695; w = 0.285;
+t0 = parseStart(startTime);
+durH = nEp * epLen / 3600;
+scored = state > 0;
+
+% ---- header: logo and when ----
+VS3_logo('show', fig, 'icon', [x0, 0.855, 0.055, 0.115]);
+ah = axes('Parent', fig, 'Position', [x0 + 0.062, 0.855, w - 0.062, 0.115], 'Visible', 'off', 'XLim', [0 1], 'YLim', [0 1]);
+if isnat(t0)
+    l1 = sprintf('%.2f h recording', durH);
+else
+    l1 = sprintf('%s  %s - %s', char(string(t0, 'yyyy-MM-dd')), char(string(t0, 'HH:mm')), ...
+        char(string(t0 + seconds(nEp * epLen), 'HH:mm')));
 end
-lines = [lines, {'', sprintf('Microarousals    %d', st(1).microarousals), ...
-    sprintf('Artifact epochs  %d', st(1).artifactEpochs), sprintf('Unscored epochs  %d', st(1).unscoredEpochs)}];
-s = strjoin(lines, newline);
+sleepPct = 100 * sum(state == 2 | state == 1) / max(1, sum(scored));
+l2 = sprintf('%.2f h, %d epochs, %.1f %% scored', durH, nEp, 100 * mean(scored));
+l3 = sprintf('Sleep %.1f %% of the scored time', sleepPct);
+extra = {};
+if st(1).microarousals > 0; extra{end + 1} = sprintf('%d microarousals', st(1).microarousals); end
+if st(1).artifactEpochs > 0; extra{end + 1} = sprintf('%d artifact epochs', st(1).artifactEpochs); end
+if st(1).unscoredEpochs > 0; extra{end + 1} = sprintf('%d unscored', st(1).unscoredEpochs); end
+text(ah, 0, 0.88, l1, 'FontSize', 11, 'FontWeight', 'bold', 'Color', [.15 .15 .25], 'VerticalAlignment', 'top', 'Interpreter', 'none');
+text(ah, 0, 0.55, l2, 'FontSize', 9, 'Color', [.35 .35 .4], 'VerticalAlignment', 'top');
+text(ah, 0, 0.30, strjoin([{l3}, extra], '  ·  '), 'FontSize', 9, 'Color', [.35 .35 .4], 'VerticalAlignment', 'top');
+
+% ---- ring: share of the scored time in each state ----
+ar = axes('Parent', fig, 'Position', [x0 + 0.02, 0.555, w - 0.04, 0.255]);
+hold(ar, 'on'); axis(ar, 'equal', 'off');
+fr = [st.percent] / 100;                   % wake, NREM, REM
+names = {'Wake', 'NREM', 'REM'}; cc = {colW, colN, colR};
+order = [2 3 1];                           % NREM, REM, wake clockwise from the top
+th0 = pi / 2;
+for k = order
+    if fr(k) <= 0; continue; end
+    th = linspace(th0, th0 - 2 * pi * fr(k), max(3, ceil(360 * fr(k))));
+    patch(ar, [cos(th), 0.62 * cos(fliplr(th))], [sin(th), 0.62 * sin(fliplr(th))], cc{k}, 'EdgeColor', 'w', 'LineWidth', 1.5);
+    mid = th0 - pi * fr(k);
+    ha = 'left'; if cos(mid) < -0.15; ha = 'right'; elseif abs(cos(mid)) <= 0.15; ha = 'center'; end
+    text(ar, 1.14 * cos(mid), 1.14 * sin(mid), sprintf('%s %.1f %%\n%.0f min, %d bouts', names{k}, 100 * fr(k), st(k).minutes, st(k).bouts), ...
+        'HorizontalAlignment', ha, 'VerticalAlignment', 'middle', 'FontSize', 8.5, 'Color', 0.75 * cc{k}, 'FontWeight', 'bold');
+    th0 = th0 - 2 * pi * fr(k);
+end
+text(ar, 0, 0.08, sprintf('%.0f %%', sleepPct), 'HorizontalAlignment', 'center', 'FontSize', 15, 'FontWeight', 'bold', 'Color', [.2 .2 .3]);
+text(ar, 0, -0.2, 'asleep', 'HorizontalAlignment', 'center', 'FontSize', 9, 'Color', [.4 .4 .45]);
+ar.XLim = [-1.9 1.9]; ar.YLim = [-1.15 1.15];
+
+% ---- box plots: duration of every bout of each state ----
+ab = axes('Parent', fig, 'Position', [x0 + 0.045, 0.315, w - 0.06, 0.185], 'TickDir', 'out', 'Box', 'off', 'FontSize', 8.5);
+hold(ab, 'on');
+allD = [];
+for k = 1:3
+    dk = st(k).boutDurations(:);
+    if isempty(dk); continue; end
+    allD = [allD; dk]; %#ok<AGROW>
+    jit = (mod((1:numel(dk))' * 0.618034, 1) - 0.5) * 0.5;      % fixed jitter: the same figure every time
+    scatter(ab, k + jit, dk, 10, cc{k}, 'filled', 'MarkerFaceAlpha', 0.35, 'MarkerEdgeColor', 'none');
+    boxchart(ab, k * ones(size(dk)), dk, 'BoxFaceColor', cc{k}, 'BoxFaceAlpha', 0.2, 'WhiskerLineColor', 0.7 * cc{k}, ...
+        'BoxEdgeColor', 0.7 * cc{k}, 'MarkerStyle', 'none', 'LineWidth', 1.2, 'BoxWidth', 0.55);
+    plot(ab, k, mean(dk), '+', 'Color', [.1 .1 .1], 'MarkerSize', 8, 'LineWidth', 1.3);
+end
+ab.YScale = 'log';
+ab.XLim = [0.4 3.6];
+ab.XTick = 1:3;
+ab.XTickLabel = arrayfun(@(k) sprintf('%s (%d)', names{k}, st(k).bouts), 1:3, 'UniformOutput', false);
+if ~isempty(allD)
+    tk = [4 10 30 60 120 300 600 1800 3600 7200 14400];
+    lo = max(min(allD) * 0.8, 2); hi = max(allD) * 1.25;
+    ab.YLim = [lo hi];
+    tk = tk(tk >= lo & tk <= hi);
+    ab.YTick = tk;
+    ab.YTickLabel = arrayfun(@durLabel, tk, 'UniformOutput', false);
+end
+title(ab, 'Bout durations (box: quartiles, +: mean)', 'FontWeight', 'normal', 'FontSize', 9);
+
+% ---- bars: states hour by hour (a last part shorter than 15 min is left out) ----
+durS = nEp * epLen;
+nH = floor(durS / 3600);
+if durS - nH * 3600 >= 900 || nH == 0; nH = nH + 1; end
+F = zeros(nH, 3);
+for j = 1:nH
+    idx = (floor((j - 1) * 3600 / epLen) + 1):min(nEp, floor(j * 3600 / epLen));
+    for k = 1:3
+        F(j, k) = 100 * mean(state(idx) == 4 - k);           % wake (3), NREM (2), REM (1)
+    end
+end
+ax = axes('Parent', fig, 'Position', [x0 + 0.045, 0.075, w - 0.06, 0.17], 'TickDir', 'out', 'Box', 'off', 'FontSize', 8.5);
+bh = bar(ax, 1:nH, F(:, [2 3 1]), 'stacked', 'BarWidth', 0.85, 'EdgeColor', 'none');   % NREM, REM, wake from the bottom
+bh(1).FaceColor = colN; bh(2).FaceColor = colR; bh(3).FaceColor = colW;
+ax.YLim = [0 100]; ax.XLim = [0.4 nH + 0.6];
+ylabel(ax, '% of the hour');
+step = max(1, ceil(nH / 9));
+ax.XTick = 1:step:nH;
+if isnat(t0)
+    lab = arrayfun(@(j) sprintf('%d', j - 1), ax.XTick, 'UniformOutput', false);
+    xlabel(ax, 'hours since the start');
+else
+    lab = arrayfun(@(j) char(string(t0 + hours(j - 1), 'HH:mm')), ax.XTick, 'UniformOutput', false);
+end
+ax.XTickLabel = lab;
+title(ax, 'States per hour', 'FontWeight', 'normal', 'FontSize', 9);
+perHour = struct('fraction', F, 'columns', {{'Wake', 'NREM', 'REM'}}, 'hourStart', (0:nH - 1));
+end
+
+function s = durLabel(x)
+if x < 60
+    s = sprintf('%g s', x);
+elseif x < 3600
+    s = sprintf('%g min', x / 60);
+else
+    s = sprintf('%g h', x / 3600);
+end
+end
+
+function t = parseStart(t)
+% datetime of the first sample, NaT when unknown
+if isempty(t); t = NaT; return; end
+if isdatetime(t); return; end
+try
+    t = datetime(char(t), 'InputFormat', 'yyyy-MM-dd HH:mm:ss.SSS');
+catch
+    try t = datetime(char(t)); catch; t = NaT; end
+end
 end
 
 function yl = robustLim(main, all, pr)

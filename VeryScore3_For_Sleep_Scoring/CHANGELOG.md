@@ -11,7 +11,8 @@ VeryScore2 1.6, 1.7 and 1.8 (below) brought together in one program, with every 
   in VeryScore3, with the same output (checked on 14 recordings), folders asked and remembered, its own `.npy`
   reader (no npy-matlab), and the converted file opened on request.
 - Tools > Summary figure (`VS3_summary`): hypnogram, sigma activity (10-15 Hz, % of the NREM mean), temperature
-  and photometry of the whole recording with the statistics of each state; clicking navigates the main window.
+  and photometry of the whole recording; on the right the clock times, a ring of the time in each state, box
+  plots of the bout durations and the states hour by hour; clicking navigates the main window.
   Saved as .fig (the panels stay zoomed together when it is opened again, without VeryScore3) and .png.
 - The VeryScore3 logo (`images/`, `VS3_logo`): start screen of the main window, progress windows of every tool,
   Help > About VeryScore3 (credits and repositories), summary figure.

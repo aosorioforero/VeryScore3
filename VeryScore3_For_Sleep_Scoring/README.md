@@ -259,7 +259,14 @@ How it is computed: the channel is multiplied by the cosine and sine of each car
 3. the temperature of the thermal video, when the file has it (one value per epoch, per video frame in grey)
 4. the photometry dF/F, when the file has it (20 Hz in grey, 10-s mean in blue; the start left out of the baseline fit shaded)
 
-and, on the right, the time in each state (% of the scored time, minutes, number of bouts, mean bout duration), microarousals, artifact and unscored epochs. Clicking in the figure shows that moment in the main window.
+and, on the right:
+
+- when the recording ran (date, start and end clock time, duration), how much is scored and asleep, microarousals, artifact and unscored epochs
+- a ring of the time spent in wake, NREM and REM (% of the scored time, minutes, number of bouts)
+- the duration of every bout of each state: box plots (quartiles, + mean) over the individual bouts, on a log time axis
+- the states hour by hour (stacked bars, labelled with the clock time; a last part shorter than 15 min is left out)
+
+Clicking in the figure shows that moment in the main window.
 
 **Summary > Save as .fig and .png...** saves it next to the recording (`<name>_summary.fig` and `.png` are proposed). The `.fig` opens in MATLAB (double-click it, or `openfig`) with the panels still zoomed together, also on a computer without VeryScore3: zoom on any part of the night and all panels follow. The figure's own File menu exports other formats (pdf, svg...). In blind mode (Import randomly) it shows neither the file name nor the date. From a script: `[fig, S] = VS3_summary('b', b, 'eeg', x, 'fs', 200, ...)`, where `S` holds the plotted series and the statistics.
 
