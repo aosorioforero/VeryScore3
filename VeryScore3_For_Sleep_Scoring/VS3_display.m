@@ -65,6 +65,10 @@ h.tracesMenu_swapTraces = uimenu(h.tracesMenu, 'Text', 'Swap traces position');
 h.tracesMenu_origain = uimenu(h.tracesMenu, 'Text', 'Reverse gain and filter');
 h.tracesMenu_reverse = uimenu(h.tracesMenu, 'Text', 'Reverse all changes');
 
+%% Help menu
+h.helpMenu = uimenu(h.mainFig, 'Text', 'Help');
+h.helpMenu_about = uimenu(h.helpMenu, 'Text', 'About VeryScore3...');
+
 %% Width menu
 h.widthMenu = uimenu(h.mainFig, 'Text', 'Width','Enable','off');
 h.widthMenu_8 = uimenu(h.widthMenu, 'Text', '8 seconds', 'Checked','off', 'UserData', 2);
@@ -75,6 +79,9 @@ h.widthMenu_40 = uimenu(h.widthMenu, 'Text', '40 seconds', 'Checked','on', 'User
 h.widthMenu_48 = uimenu(h.widthMenu, 'Text', '48 seconds', 'Checked','off', 'UserData', 12);
 h.widthMenu_96 = uimenu(h.widthMenu, 'Text', '96 seconds', 'Checked','off', 'UserData', 24);
 h.widthMenu_384 = uimenu(h.widthMenu, 'Text', '384 seconds', 'Checked','off', 'UserData', 96);
+
+%% start screen (logo), removed when a file is imported
+h.splash = VS3_logo('start', h.mainFig, h.updt);
 
 end
 

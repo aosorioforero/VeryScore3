@@ -19,7 +19,7 @@ _Dedicated to Romain Cardis and Anita Lüthi, who wrote VeryScore2 and shared it
 ## Installation
 
 1. Add the folder `VeryScore3_For_Sleep_Scoring` to the MATLAB path (the subfolders are added by the tools when they need them).
-2. Type `VS3_main` and import a file in the "File" menu.
+2. Type `VS3_main`: the start screen shows the logo and what to do first. Import a file in the "File" menu.
 
 Requirements: MATLAB R2022b or newer (tested with R2024b), Signal Processing Toolbox. Optional: Parallel Computing Toolbox (faster thermal video analysis), Image Processing Toolbox (only for the `hottestBlob` thermal ROI method), Python 3 with `numpy` and `h5py` (only to convert thermal videos). The Statistics toolbox is not needed.
 
@@ -161,6 +161,10 @@ Next epoch of a state: **shift+w**, **shift+n**, **shift+r**, **shift+m**, **shi
 
 **Reverse all changes:** Returns the display of the traces to the original state at the moment of loading the file. This will not affect your scoring, it reverses only the display (the dF/F and the temperature panel are shown as at loading; the transitions you placed by hand are kept).
 
+**Help >**
+
+**About VeryScore3...:** version, credits (VeryScore2 by Romain Cardis and Anita Lüthi, VeryScore3) and links to the repositories.
+
 **Width >**
 
 This menu allows to change the view window to zoom in or out on the x-axis. I prefer to score in 40 s-windows, Alejo prefers in 32 s-windows for example.
@@ -255,7 +259,9 @@ How it is computed: the channel is multiplied by the cosine and sine of each car
 3. the temperature of the thermal video, when the file has it (one value per epoch, per video frame in grey)
 4. the photometry dF/F, when the file has it (20 Hz in grey, 10-s mean in blue; the start left out of the baseline fit shaded)
 
-and, on the right, the time in each state (% of the scored time, minutes, number of bouts, mean bout duration), microarousals, artifact and unscored epochs. Clicking in the figure shows that moment in the main window. Save it with the figure's File menu (png, pdf, svg...). In blind mode (Import randomly) it shows neither the file name nor the date. From a script: `[fig, S] = VS3_summary('b', b, 'eeg', x, 'fs', 200, ...)`, where `S` holds the plotted series and the statistics.
+and, on the right, the time in each state (% of the scored time, minutes, number of bouts, mean bout duration), microarousals, artifact and unscored epochs. Clicking in the figure shows that moment in the main window.
+
+**Summary > Save as .fig and .png...** saves it next to the recording (`<name>_summary.fig` and `.png` are proposed). The `.fig` opens in MATLAB (double-click it, or `openfig`) with the panels still zoomed together, also on a computer without VeryScore3: zoom on any part of the night and all panels follow. The figure's own File menu exports other formats (pdf, svg...). In blind mode (Import randomly) it shows neither the file name nor the date. From a script: `[fig, S] = VS3_summary('b', b, 'eeg', x, 'fs', 200, ...)`, where `S` holds the plotted series and the statistics.
 
 
 ## Open Ephys recordings
@@ -273,6 +279,7 @@ When one recording was converted, you can open it right away. An 8-h recording w
 
 - **VeryScore2** (2018-2021): Romain Cardis and Anita Lüthi, Lüthi lab, Department of Fundamental Neurosciences, University of Lausanne, with updates by Georgios Foustoukos (2023-2024). VeryScore1's autoscoring is kept as the classic auto-scoring.
 - **VeryScore3** (2026): Alejandro Osorio-Forero (Netherlands Institute for Neuroscience), written with Claude (Anthropic): auto-scoring, thermal video, photometry, unification.
+- The logo (`images/`, drawn by `images/VS3_makeLogo.py`) appears on the start screen, in the progress windows, in Help > About and in the summary figure.
 - If you use VeryScore in published work, please cite the Lüthi lab as described in the README and CITATION.cff at the root of this repository.
 
 **In the name of the Lüthi lab, we wish you a good scoring!**

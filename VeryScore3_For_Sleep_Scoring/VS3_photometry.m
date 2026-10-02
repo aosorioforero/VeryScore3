@@ -135,7 +135,7 @@ end
 % ---- read the channel at full rate and compute ----
 w = [];
 if o.interactive
-    w = waitbar(0, sprintf('Reading %s from the file...', name), 'Name', 'VeryScore3 - photometry');
+    w = VS3_logo('waitbar', 0, sprintf('Reading %s from the file...', name), 'Name', 'VeryScore3 - photometry');
     set(findall(w, 'Type', 'text'), 'Interpreter', 'none'); % channel names with underscores
 end
 if isnan(skip); skip = VS3_pref('get', skipPrefName(method), defaultSkip(method)); end

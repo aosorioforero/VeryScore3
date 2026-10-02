@@ -170,7 +170,7 @@ end
 % ---- 5. the ROI temperature, one value per frame -----------------------------------
 w = [];
 if o.interactive
-    w = waitbar(0, 'Extracting the temperature from the video...', 'Name', 'VeryScore3 - thermal video', ...
+    w = VS3_logo('waitbar', 0, 'Extracting the temperature from the video...', 'Name', 'VeryScore3 - thermal video', ...
         'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
     setappdata(w, 'canceling', 0);
 end
@@ -889,7 +889,7 @@ pb.redirectOutput(java.io.File(logFile));
 proc = pb.start();
 w = [];
 if interactive
-    w = waitbar(0, title, 'Name', 'VeryScore3 - thermal video', 'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
+    w = VS3_logo('waitbar', 0, title, 'Name', 'VeryScore3 - thermal video', 'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
     setappdata(w, 'canceling', 0);
 else
     fprintf('%s\n', title);

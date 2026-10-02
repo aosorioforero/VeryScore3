@@ -13,6 +13,7 @@ function VS3_main
 % - Auto-scoring library: the shipped recordings plus your own, kept apart.
 % - File > Convert Open Ephys recording (VS3_convertOpenEphys).
 % - Tools > Summary figure: hypnogram, EEG sigma, temperature, photometry (VS3_summary).
+% - The VeryScore3 logo: start screen, progress windows, Help > About (VS3_logo).
 %
 % History of VeryScore2:
 % Version 1.5 addings.
@@ -102,6 +103,7 @@ h.toolsMenu_autoScoreClassic.Callback = @launchAuto;
 h.toolsMenu_nameTraces.Callback = @reloadNames;
 h.toolsMenu_takeSnap.Callback = @takeSnap;
 h.toolsMenu_summary.Callback = @summaryFigure;
+h.helpMenu_about.Callback = @(~,~) VS3_logo('about', h.updt);
 % Tools > Thermal video
 h.toolsMenu_thermalAnalyse.Callback = @thermalAnalyse;
 h.toolsMenu_thermalShow.Callback = @thermalShowHide;
@@ -169,15 +171,19 @@ h.mainFig.KeyPressFcn = @key;
         if ~ok || isempty(sel); return; end
         st = '';
         ttl = h.filen;
+        [~, base] = fileparts(h.filen);
+        sfile = fullfile(h.path, [base, '_summary.fig']); % proposed when the summary is saved
         if h.rand == 1
             ttl = 'blind scoring'; % no file name, no date
+            sfile = fullfile(h.path, 'summary.fig');
         elseif ismember('Infos', who(h.file))
             Infos = h.file.Infos;
             if isfield(Infos, 'StartTime'); st = Infos.StartTime; end
         end
         try
             VS3_summary('b', b, 'eeg', h.bigplot.oriTraces(sel, :), 'fs', 200, 'eegName', regexprep(names{sel}, '^\d+: ', ''), ...
-                'thermal', h.thermal, 'photometry', h.photometry, 'startTime', st, 'title', ttl, 'navigate', @goToEpoch);
+                'thermal', h.thermal, 'photometry', h.photometry, 'startTime', st, 'title', ttl, 'navigate', @goToEpoch, ...
+                'file', sfile);
         catch err
             errordlg(sprintf('The summary could not be made:\n%s', err.message), 'Summary figure');
         end
@@ -384,7 +390,7 @@ h.mainFig.KeyPressFcn = @key;
             h.filen = filen;
             h.path = pathf;
         end
-        w = waitbar(0,'Your file is being loaded');
+        w = VS3_logo('waitbar', 0, 'Your file is being loaded', 'Name', 'VeryScore3');
         h.file = matfile([h.path, h.filen], 'writable', true);
         try
             traces = h.file.traces;
@@ -458,6 +464,10 @@ h.mainFig.KeyPressFcn = @key;
   
         if isfield(h,'bigplot')
             h.bigplot.deleteAxes()
+        end
+        if isfield(h, 'splash') % the start screen
+            delete(h.splash(isgraphics(h.splash)));
+            h.splash = [];
         end
         
         h.bigplot = VS3_tracesPlot(h,1,10);
@@ -795,7 +805,7 @@ h.mainFig.KeyPressFcn = @key;
         if ~ok; return; end
         VS3_pref('set', 'autoScore', struct('names', {names}, 'eeg', o.eeg, 'emg', o.emg, 'review', o.review));
         tra = h.bigplot.oriTraces;
-        w = waitbar(0, 'Auto-scoring...', 'Name', 'Auto-scoring');
+        w = VS3_logo('waitbar', 0, 'Auto-scoring...', 'Name', 'Auto-scoring');
         try
             [b, R] = VS3_autoScoreTool('score', tra(o.eeg,:), tra(o.emg,:), b, ...
                 'keepScored', o.keepScored, 'review', o.review, 'waitbar', w);
@@ -829,7 +839,7 @@ h.mainFig.KeyPressFcn = @key;
         [o, ok] = VS3_autoScoreTool('dialog', names, 0, numel(b), d);
         if ~ok; return; end
         [~, name] = fileparts(h.filen);
-        w = waitbar(0.3, 'Computing the features...', 'Name', 'Auto-scoring library');
+        w = VS3_logo('waitbar', 0.3, 'Computing the features...', 'Name', 'Auto-scoring library');
         try
             tra = h.bigplot.oriTraces;
             F = VS3_autoScoreTool('features', tra(o.eeg,:), tra(o.emg,:), 200, numel(b));

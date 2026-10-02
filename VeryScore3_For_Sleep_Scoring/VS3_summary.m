@@ -24,14 +24,24 @@ function [fig, S] = VS3_summary(varargin)
 %   'startTime'   time of the first sample (text or datetime), shown in the axis label ('' = unknown)
 %   'title'       title of the figure (file name; '' in blind mode)
 %   'navigate'    function handle fcn(epoch): a click in the figure calls it (VeryScore3 jumps there)
+%   'file'        file proposed by Summary > Save as .fig and .png (default: summary.fig)
+%   'saveAs'      save the summary right away as this .fig (and a .png next to it)
 %   'visible'     'on' (default) | 'off'
+%
+%   VS3_summary('save', fig, file)   saves a summary figure as file.fig and file.png. The .fig opens in
+%   MATLAB with its panels still zoomed together (openfig / double-click); clicking no longer navigates.
 % S holds what is drawn: time (h) and state of every epoch, sigma (% and raw power), the temperature
 % and photometry series, and S.stats (minutes, %, bouts and mean bout duration per state).
 %
 % Alejandro Osorio-Forero with Claude, 2026, for VeryScore3.
 
+if nargin > 0 && ischar(varargin{1}) && strcmpi(varargin{1}, 'save')
+    saveSummary(varargin{2:end});
+    fig = []; S = [];
+    return
+end
 o = struct('b', '', 'eeg', [], 'fs', 200, 'eegName', 'EEG', 'sigmaBand', [10 15], 'thermal', [], ...
-    'photometry', [], 'startTime', '', 'title', '', 'navigate', [], 'visible', 'on');
+    'photometry', [], 'startTime', '', 'title', '', 'navigate', [], 'visible', 'on', 'file', 'summary.fig', 'saveAs', '');
 for k = 1:2:numel(varargin)
     if ~isfield(o, varargin{k}); error('VS3_summary:option', 'Unknown option ''%s''.', varargin{k}); end
     o.(varargin{k}) = varargin{k + 1};
@@ -80,7 +90,8 @@ for i = 1:np
     hi = hRest; if i == 1; hi = h1; end
     if np == 1; hi = h1 * 2; end
     y = y - hi;
-    ax(i) = axes('Parent', fig, 'Position', [left, y, width, hi], 'TickDir', 'out', 'Box', 'off', 'FontSize', 9);
+    ax(i) = axes('Parent', fig, 'Position', [left, y, width, hi], 'TickDir', 'out', 'Box', 'off', 'FontSize', 9, ...
+        'Tag', 'VS3summary');
     y = y - gap;
     hold(ax(i), 'on')
 end
@@ -178,9 +189,45 @@ if ~isempty(o.navigate)
     end
 end
 
-% ---- statistics ----
-annotation(fig, 'textbox', [0.75, 0.08, 0.24, 0.86], 'String', statsText(S.stats, nEp, epLen), ...
+% ---- statistics, logo, saving ----
+annotation(fig, 'textbox', [0.75, 0.08, 0.24, 0.78], 'String', statsText(S.stats, nEp, epLen), ...
     'EdgeColor', 'none', 'FontName', 'Consolas', 'FontSize', 9, 'VerticalAlignment', 'top', 'Interpreter', 'none');
+VS3_logo('show', fig, 'icon', [0.755, 0.865, 0.07, 0.11]);
+setappdata(fig, 'VS3summaryFile', o.file);
+mm = uimenu(fig, 'Text', 'Summary');
+uimenu(mm, 'Text', 'Save as .fig and .png...', 'MenuSelectedFcn', 'VS3_summary(''save'', gcbf)');
+if ~isempty(o.saveAs)
+    saveSummary(fig, o.saveAs);
+end
+end
+
+%% ======================================================================= saving
+function saveSummary(fig, f)
+% file.fig (MATLAB figure, panels zoomed together when it is opened again) and file.png
+if nargin < 2 || isempty(f)
+    d = getappdata(fig, 'VS3summaryFile');
+    if isempty(d); d = 'summary.fig'; end
+    [fn, p] = uiputfile({'*.fig', 'MATLAB figure (*.fig), saved with a .png'}, 'Save the summary', d);
+    if isequal(fn, 0); return; end
+    f = fullfile(p, fn);
+end
+[p, n] = fileparts(f);
+if isempty(p); p = pwd; end
+ax = findobj(fig, 'Type', 'axes', 'Tag', 'VS3summary');
+bd = get(ax, {'ButtonDownFcn'});
+cf = get(ax, {'CreateFcn'});
+set(ax, 'ButtonDownFcn', '');   % the link to the VeryScore3 window cannot be saved
+set(ax, 'CreateFcn', 'linkaxes(findobj(ancestor(gcbo, ''figure''), ''Type'', ''axes'', ''Tag'', ''VS3summary''), ''x'')');
+try
+    savefig(fig, fullfile(p, [n, '.fig']));
+    exportgraphics(fig, fullfile(p, [n, '.png']), 'Resolution', 150);
+catch err
+    set(ax, {'ButtonDownFcn'}, bd); set(ax, {'CreateFcn'}, cf);
+    rethrow(err)
+end
+set(ax, {'ButtonDownFcn'}, bd);
+set(ax, {'CreateFcn'}, cf);
+fprintf('Summary saved: %s (.fig and .png)\n', fullfile(p, n));
 end
 
 %% ======================================================================= helpers

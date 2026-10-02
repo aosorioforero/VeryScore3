@@ -81,7 +81,7 @@ if isempty(recs)
 end
 w = [];
 if o.interactive
-    w = waitbar(0, 'Converting...', 'Name', 'VeryScore3 - Open Ephys');
+    w = VS3_logo('waitbar', 0, 'Converting...', 'Name', 'VeryScore3 - Open Ephys');
     set(findall(w, 'Type', 'text'), 'Interpreter', 'none');
 end
 failed = {};
