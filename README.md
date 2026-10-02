@@ -1,3 +1,23 @@
+<p align="center"><img src="VeryScore3_For_Sleep_Scoring/images/VS3_banner.png" alt="VeryScore3" width="100%"></p>
+
+# VeryScore3
+
+**VeryScore3** scores mouse sleep (wake, NREM, REM) in 4-second epochs in MATLAB. It is the continuation of **VeryScore2**, written by Romain Cardis and Anita Lüthi in the Lüthi lab (University of Lausanne), and it reads and writes the same files. New in VeryScore3:
+
+- **Auto-scoring** that learns from scored recordings and adapts to each new one (about 90 % agreement with a human scorer)
+- **Thermal video**: the temperature of the animal from an Optris thermal camera, next to the hypnogram
+- **Fibre photometry**: dF/F of a photometry channel recorded with the EEG
+- **Open Ephys** recordings converted into VeryScore files from the File menu
+- **Summary figure** of the whole recording: hypnogram, sigma activity, temperature, photometry, bout durations and states hour by hour
+
+**Get started:** the software and its documentation are in [VeryScore3_For_Sleep_Scoring](VeryScore3_For_Sleep_Scoring/). Add that folder to the MATLAB path and type `VS3_main`.
+
+This repository is a fork of [luthilab/IntanLuthiLab](https://github.com/luthilab/IntanLuthiLab), the Lüthi lab's software for recording and scoring mouse sleep. Their README follows below unchanged, and their other tools are in the other folders. If you use VeryScore in published work, please cite the Lüthi lab (see their citations below and CITATION.cff).
+
+_Dedicated to Romain Cardis and Anita Lüthi, who wrote VeryScore2 and shared it with all of us._
+
+---
+
 # IntanLuthiLab
 
 Welcome to the IntanLuthiLab repository.
