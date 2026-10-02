@@ -27,6 +27,10 @@ function Rc = thermal_motion_censor(R, varargin)
 %   'fill'         'interp' linear interpolation over censored frames (default)
 %                  'nan'    leave them NaN
 %                  'hold'   previous valid value
+%   'keepCols'     columns left exactly as measured, never filled (default: the geometry of the ROI
+%                  method, that is position and area: 3:end for shavedPatch and hottestBlob,
+%                  end-2:end for mouseBody, the position for the others). Filling them would erase
+%                  the movement record that estimate_offset needs for the video/EEG offset check.
 %   'verbose'      true (default)
 %
 % OUTPUT Rc: a copy of R with
@@ -39,7 +43,7 @@ function Rc = thermal_motion_censor(R, varargin)
 % Alejo Osorio, 2026 (with Claude).
 
 p = struct('speedThr', 0.5, 'grow', 2, 'centroidCols', [], 'areaCol', [], 'areaThr', 0.15, ...
-    'fill', 'interp', 'verbose', true);
+    'fill', 'interp', 'keepCols', [], 'verbose', true);
 for k = 1:2:numel(varargin), p.(varargin{k}) = varargin{k + 1}; end
 
 V = R.value;
@@ -47,6 +51,18 @@ nc = size(V, 2);
 if isempty(p.centroidCols)
     p.centroidCols = [nc - 1, nc];               % every roi_* method puts the position last
 end
+if isempty(p.keepCols)
+    % Geometry columns (position, area) are left untouched: they are not temperatures, and
+    % interpolating them would erase the very movement that this function detects. estimate_offset
+    % reads the position back out of Thermal.allColumns to check the video/EEG offset, and that
+    % check fails completely when the position has been smoothed over the moving frames.
+    switch lower(string(R.method))
+        case {"shavedpatch", "hottestblob"}, p.keepCols = 3:nc;
+        case "mousebody",                    p.keepCols = (nc - 2):nc;
+        otherwise,                           p.keepCols = p.centroidCols;
+    end
+end
+p.keepCols = intersect(p.keepCols, 1:nc);
 if isempty(p.areaCol) && ismember(lower(string(R.method)), ["mousebody", "shavedpatch"])
     p.areaCol = nc - 2;                          % these two put the body area before the position
 end
@@ -75,11 +91,12 @@ if p.grow > 0
 end
 
 Vc = V;
+fillCols = setdiff(1:nc, p.keepCols);            % the temperature columns; geometry stays raw
 switch lower(p.fill)
     case 'nan'
-        Vc(bad, :) = NaN;
+        Vc(bad, fillCols) = NaN;
     case {'interp', 'hold'}
-        for c = 1:size(V, 2)
+        for c = fillCols
             x = V(:, c);
             x(bad) = NaN;
             good = isfinite(x);

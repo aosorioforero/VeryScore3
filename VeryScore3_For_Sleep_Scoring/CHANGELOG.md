@@ -48,9 +48,10 @@ VeryScore2 1.6, 1.7 and 1.8 (below) brought together in one program, with every 
   - hottestBlob's 3 K threshold is converted to counts on uncalibrated videos.
   - New ROI methods from the Thermal project (2026-10-02): `shavedPatch` (the shaved skin, segmented inside the
     animal) and `mouseBody` (the whole animal), sharing `mouseMask`, with motion censoring
-    (`thermal_motion_censor`, options `motionCensor` and `speedThr`) applied to them by default. In VeryScore3 the
-    position and area columns keep their measured values over the censored frames, so that the movement estimate
-    of the offset works with these methods too (it gave nonsense when the positions were interpolated).
+    (`thermal_motion_censor`, options `motionCensor` and `speedThr`) applied to them by default. Only the
+    temperatures are filled over the censored frames; the position and area columns keep their measured values
+    (option `keepCols`), so that the movement estimate of the offset works with these methods too (it gave
+    nonsense when the positions were interpolated).
   - ROI method names and N are checked; the scoring file must be writable before the long extraction, and a
     failed save keeps the result; a camera calibration of another camera is refused before it is applied;
     temporary logs are deleted; the offset source is recorded correctly; VS3 always uses its own thermal code.

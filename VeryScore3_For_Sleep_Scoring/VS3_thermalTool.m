@@ -347,27 +347,13 @@ if ~want || size(R.value, 2) < 3 || exist('thermal_motion_censor', 'file') ~= 2
     return
 end
 try
+    % only the temperatures are filled over the moving frames; the position and area columns keep
+    % the measured values (option keepCols), which the movement estimate of the offset reads
     R = thermal_motion_censor(R, 'speedThr', o.speedThr, 'verbose', false);
     n = nnz(R.censored);
-    % only the temperatures are filled over the moving frames: the position and area columns keep
-    % the measured values, otherwise the movement disappears from the result (the movement estimate
-    % of the offset, estimate_offset, reads the position)
-    geom = geometryColumns(R.method, size(R.value, 2));
-    R.value(:, geom) = R.valueRaw(:, geom);
 catch err
     warning('VS3_thermalTool:censor', 'The moving frames could not be removed (%s).', err.message);
 end
-end
-
-function c = geometryColumns(method, nc)
-% columns of an ROI result that hold a position or an area rather than a temperature
-switch lower(char(method))
-    case 'shavedpatch'; c = 3:8;          % patchArea, patchRow, patchCol, bodyArea, centroidRow, centroidCol
-    case 'mousebody';   c = 6:8;          % bodyArea, centroidRow, centroidCol
-    case 'hottestblob'; c = 3:5;          % area, row, col
-    otherwise;          c = nc - 1:nc;    % the position is the last two columns of every ROI method
-end
-c = c(c >= 1 & c <= nc);
 end
 
 function ok = wakeFractionOk(b)
