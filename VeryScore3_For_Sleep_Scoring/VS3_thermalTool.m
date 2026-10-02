@@ -23,7 +23,11 @@ function varargout = VS3_thermalTool(action, varargin)
 % Options of 'analyse' (name/value, all optional; with 'interactive' true - the default - the
 % video file and the ROI options are asked with dialogs when not given):
 %   'video'        .ravi or already converted .h5 file
-%   'roiMethod'    'hottestN' (default) | 'hotspotWindow' | 'hottestBlob' (see thermal/roi_methods)
+%   'roiMethod'    'hottestN' (default) | 'shavedPatch' | 'mouseBody' | 'hotspotWindow' |
+%                  'hottestBlob' | 'fixedMask' (see thermal/roi_methods). 'shavedPatch' tracks the
+%                  shaved skin of the animal and is the most sensitive; 'mouseBody' measures the
+%                  whole segmented animal. Both also return its position, so the frames in which
+%                  it moved can be dropped afterwards with thermal_motion_censor.
 %   'N'            number of hottest pixels averaged (default 50)
 %   'offset'       video time (s since the first frame) at which EEG sample 1 was recorded
 %                  (> 0 = the EEG started after the video). Default: computed from the EEG start
@@ -40,6 +44,12 @@ function varargout = VS3_thermalTool(action, varargin)
 %   'parallel'     'auto' (default) | true | false: spread the ROI extraction over a process
 %                  pool (Parallel Computing Toolbox). 'auto' uses it when a pool is already
 %                  running or the video has >= 20000 frames (starting a pool takes ~20 s).
+%   'motionCensor' 'auto' (default) | true | false: drop the frames in which the animal moved and
+%                  interpolate over them (thermal_motion_censor). The thermal signal jumps when the
+%                  animal moves, not because the ROI is misplaced, so this removes most of the
+%                  jumps whatever ROI is used. 'auto' applies it to the ROI methods that track the
+%                  animal ('shavedPatch', 'mouseBody'), leaving the older methods as they were.
+%   'speedThr'     px per frame above which a frame counts as moving (default 0.5)
 %
 % EEG start time: Infos.StartTime (written by the Open Ephys converter ToVS2_2026), else the first
 % of the Infos fields Start, RecordingStart, DateTime or Timestamp that holds a time of day (text
@@ -92,7 +102,7 @@ ok = false;
 o = parseOpts(struct('video', '', 'roiMethod', 'hottestN', 'N', 50, 'offset', [], 'eegStart', [], 'b', '', ...
     'Fs', [], 'nSamples', [], 'nEpochs', [], 'save', true, 'checkOffset', true, ...
     'interactive', true, 'frames', [], 'varName', 'Thermal', 'parallel', 'auto', 'previousOffset', [], ...
-    'blind', false), varargin);
+    'blind', false, 'motionCensor', 'auto', 'speedThr', 0.5), varargin);
 
 % ---- 0. the scoring file: its time base, and can the result be stored in it? -------
 [o.Fs, o.nSamples, o.nEpochs] = fileInfo(matFile, o.Fs, o.nSamples, o.nEpochs);
@@ -187,11 +197,22 @@ catch err
 end
 if ishandle(w); delete(w); end
 
+% ---- 5b. drop the frames in which the animal moved ---------------------------------
+% The apparent surface temperature does not jump because the ROI is badly placed, it jumps because
+% the animal moves and the camera then sees different fur, limbs and tail (about 9 mK per frame
+% while still, several hundred mK while moving). The ROI methods that return the position of the
+% animal can therefore censor those frames; 'auto' does it for those methods only, so results of
+% the older methods do not change.
+[R, o.censored] = censorMotion(R, o);
+
 % ---- 6. on the time base of the scoring --------------------------------------------
 [o.Fs, o.nSamples, o.nEpochs] = fileInfo(matFile, o.Fs, o.nSamples, o.nEpochs);
 alignArgs = {'save', false, 'Fs', o.Fs, 'nSamples', o.nSamples, 'nEpochs', o.nEpochs};
 A = thermal_align_to_eeg(R, matFile, 'offset', o.offset, alignArgs{:});
 A = addBookkeeping(A, o.video, offsetSrc, eegStart, NaN, NaN);
+if o.censored > 0
+    A.motionCensor = struct('frames', o.censored, 'fraction', o.censored / size(R.value, 1), 'speedThr', o.speedThr);
+end
 
 % ---- 7. does the movement in the video agree with the wake epochs? -----------------
 if o.checkOffset
@@ -239,9 +260,13 @@ if o.save
 end
 videoName = o.video;
 if o.blind; videoName = '(not shown: blind scoring)'; end
-msg = sprintf(['Thermal analysis done in %s.\n\nVideo: %s\nROI: %s, N = %d\nUnit: %s\n%s', ...
+censorNote = '';
+if o.censored > 0
+    censorNote = sprintf('Moving frames dropped: %d (%.1f %%)\n', o.censored, 100 * o.censored / size(R.value, 1));
+end
+msg = sprintf(['Thermal analysis done in %s.\n\nVideo: %s\nROI: %s, N = %d\nUnit: %s\n%s%s', ...
     'Epochs with video: %d / %d\n\n%s'], fmtTime(toc(t0)), videoName, o.roiMethod, o.N, A.unit, ...
-    offsetReport(A), nnz(~isnan(A.valueEpoch)), numel(A.valueEpoch), savedNote(o, matFile, saveErr));
+    censorNote, offsetReport(A), nnz(~isnan(A.valueEpoch)), numel(A.valueEpoch), savedNote(o, matFile, saveErr));
 if o.interactive
     msgbox(msg, 'VeryScore3 - thermal video')
 else
@@ -309,6 +334,40 @@ function names = roiMethods()
 % the ROI methods of thermal\roi_methods
 d = dir(fullfile(thermalDir(), 'roi_methods', 'roi_*.m'));
 names = regexprep({d.name}, '^roi_|\.m$', '');
+end
+
+function [R, n] = censorMotion(R, o)
+% remove the frames in which the animal moved (see thermal_motion_censor)
+n = 0;
+want = o.motionCensor;
+if (ischar(want) || isstring(want)) && strcmpi(char(want), 'auto')
+    want = ismember(lower(string(R.method)), ["mousebody", "shavedpatch"]);
+end
+if ~want || size(R.value, 2) < 3 || exist('thermal_motion_censor', 'file') ~= 2
+    return
+end
+try
+    R = thermal_motion_censor(R, 'speedThr', o.speedThr, 'verbose', false);
+    n = nnz(R.censored);
+    % only the temperatures are filled over the moving frames: the position and area columns keep
+    % the measured values, otherwise the movement disappears from the result (the movement estimate
+    % of the offset, estimate_offset, reads the position)
+    geom = geometryColumns(R.method, size(R.value, 2));
+    R.value(:, geom) = R.valueRaw(:, geom);
+catch err
+    warning('VS3_thermalTool:censor', 'The moving frames could not be removed (%s).', err.message);
+end
+end
+
+function c = geometryColumns(method, nc)
+% columns of an ROI result that hold a position or an area rather than a temperature
+switch lower(char(method))
+    case 'shavedpatch'; c = 3:8;          % patchArea, patchRow, patchCol, bodyArea, centroidRow, centroidCol
+    case 'mousebody';   c = 6:8;          % bodyArea, centroidRow, centroidCol
+    case 'hottestblob'; c = 3:5;          % area, row, col
+    otherwise;          c = nc - 1:nc;    % the position is the last two columns of every ROI method
+end
+c = c(c >= 1 & c <= nc);
 end
 
 function ok = wakeFractionOk(b)
@@ -442,7 +501,7 @@ function [method, N, offset, eegStart, src, ok] = optionsDialog(method, N, offse
 ok = false;
 if isnat(videoStart); vs = 'unknown'; else; vs = timeStr(videoStart); end
 if isnat(eegStart); es = ''; else; es = timeStr(eegStart); end
-prompts = {'ROI method: hottestN, hotspotWindow or hottestBlob (see thermal\roi_methods)', ...
+prompts = {sprintf('ROI method, one of: %s (see thermal\\roi_methods)', strjoin(roiMethods(), ', ')), ...
     'Number of hottest pixels averaged (N)', ...
     sprintf(['Offset (s): video time at which the EEG recording started (%s). ', ...
     '0 = both started together, positive = the EEG started after the video.'], src), ...
@@ -637,6 +696,7 @@ est = NaN; estCorr = NaN;
 if isfield(A, 'offsetEstimate'); est = A.offsetEstimate; end
 if isfield(A, 'offsetEstimateCorr'); estCorr = A.offsetEstimateCorr; end
 A2 = addBookkeeping(A2, videoFile, src, NaT, est, estCorr);
+if isfield(A, 'motionCensor'); A2.motionCensor = A.motionCensor; end
 if o.save
     saveVar(matFile, o.varName, A2);
 end

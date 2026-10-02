@@ -27,6 +27,7 @@ if isfield(A, 'roiMethod')
     switch lower(A.roiMethod)
         case {'hottestn', 'hotspotwindow'}, rc = [3 4];
         case 'hottestblob', rc = [4 5];
+        case {'shavedpatch', 'mousebody'}, rc = [7 8];   % position of the whole animal
     end
 end
 if ~isempty(rc) && size(ac, 1) >= max(rc)

@@ -21,7 +21,7 @@ _Dedicated to Romain Cardis and Anita Lüthi, who wrote VeryScore2 and shared it
 1. Add the folder `VeryScore3_For_Sleep_Scoring` to the MATLAB path (the subfolders are added by the tools when they need them).
 2. Type `VS3_main`: the start screen shows the logo and what to do first. Import a file in the "File" menu.
 
-Requirements: MATLAB R2022b or newer (tested with R2024b), Signal Processing Toolbox. Optional: Parallel Computing Toolbox (faster thermal video analysis), Image Processing Toolbox (only for the `hottestBlob` thermal ROI method), Python 3 with `numpy` and `h5py` (only to convert thermal videos). The Statistics toolbox is not needed.
+Requirements: MATLAB R2022b or newer (tested with R2024b), Signal Processing Toolbox. Optional: Parallel Computing Toolbox (faster thermal video analysis), Image Processing Toolbox (only for the `shavedPatch`, `mouseBody` and `hottestBlob` thermal ROI methods), Python 3 with `numpy` and `h5py` (only to convert thermal videos). The Statistics toolbox is not needed.
 
 If VeryScore2 is also on your MATLAB path, remove it: both have files with the same names (the thermal code, `renameFileToBt`, ...).
 
@@ -206,10 +206,12 @@ If the animal was filmed with an Optris thermal camera (PIX Connect `.ravi` reco
 **Analyse video (.ravi / .h5)...:** Select the `.ravi` of the loaded recording (or a `.h5` already converted) and fill in the options: ROI method, number of hottest pixels averaged (N), and the video/EEG offset in seconds or as the EEG start time. The tool then:
 
 1. converts the `.ravi` once into a compact `.h5` next to it (Python, a few minutes, progress bar with cancel). If the `.h5` already exists it is reused.
-2. extracts one temperature per frame with the ROI method (`hottestN` = mean of the N hottest pixels of the frame, default N = 50; `hotspotWindow` and `hottestBlob` are more robust when several warm objects are in the image; your own methods go in `thermal\roi_methods\roi_<name>.m`). About 1 min for a 5-h video; with the Parallel Computing Toolbox (used automatically for videos longer than about 3 h) about 30 s the first time in a MATLAB session, while the workers start, and about 10 s afterwards.
+2. extracts one temperature per frame with the ROI method (`hottestN` = mean of the N hottest pixels of the frame, default N = 50; `shavedPatch` follows the shaved skin of the animal, the most sensitive measure on a shaved animal (wake - NREM 0.83 K on bare skin against 0.32 K through the fur on AH2); `mouseBody` measures the whole segmented animal; `hotspotWindow` and `hottestBlob` are more robust when several warm objects are in the image; your own methods go in `thermal\roi_methods\roi_<name>.m`). About 1 min for a 5-h video; with the Parallel Computing Toolbox (used automatically for videos longer than about 3 h) about 30 s the first time in a MATLAB session, while the workers start, and about 10 s afterwards.
 3. puts the values on the time base of the scoring (one value per 4-s epoch, same indexing as the scoring string `b`), checks with the movement seen in the video whether the offset agrees with the wake epochs, and stores everything as the variable **Thermal** in the scoring file (`Thermal.valueEpoch`, `Thermal.t2Hz` / `Thermal.value2Hz` per frame, `Thermal.valueFs` per EEG sample, `Thermal.unit`, `Thermal.offset`, ...).
 
 The next time the file is loaded, the panel appears automatically.
+
+With `shavedPatch` and `mouseBody` the frames in which the animal moves (more than 0.5 pixel per frame, option `speedThr`) are dropped and the temperature is interpolated over them; the number of dropped frames is reported and stored as `Thermal.motionCensor`. During long active periods a large part of the frames can be dropped, so there the trace is mostly interpolation.
 
 Reading the panel: during wake the value also follows the movement of the animal. A moving animal smears the hottest pixels of the 2-Hz frames and looks colder (in our recordings still wake was warmer than NREM, moving wake colder), so compare states with this in mind.
 
